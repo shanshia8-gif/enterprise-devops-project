@@ -57,9 +57,7 @@ enterprise-devops-project/
 │
 └── terraform/
     ├── main.tf
-    ├── variables.tf
-    └── outputs.tf
-```
+    └── .terraform.lock.hcl
 
 ## ⚙️ Infrastructure Provisioning with Terraform
 
