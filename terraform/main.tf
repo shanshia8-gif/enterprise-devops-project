@@ -1,3 +1,18 @@
+terraform {
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 6.0"
+    }
+  }
+
+  required_version = ">= 1.5.0"
+}
+
+provider "aws" {
+  region = "ap-south-1"
+}
+
 # VPC
 resource "aws_vpc" "devops_vpc" {
   cidr_block           = "10.0.0.0/16"
@@ -62,7 +77,7 @@ resource "aws_security_group" "devops_sg" {
     from_port   = 22
     to_port     = 22
     protocol    = "tcp"
-    cidr_blocks = ["122.171.21.97/32"]
+    cidr_blocks = ["0.0.0.0/0"]
   }
 
   # Jenkins
@@ -107,16 +122,25 @@ resource "aws_security_group" "devops_sg" {
 
 # EC2 Instance
 resource "aws_instance" "jenkins_server" {
-  ami           = var.ami_id
-  instance_type = var.instance_type
+  ami           = "ami-0f918f7e67a3323f0"
+  instance_type = "t3.small"
 
   subnet_id                   = aws_subnet.public_subnet.id
   vpc_security_group_ids      = [aws_security_group.devops_sg.id]
   associate_public_ip_address = true
 
-  key_name = var.key_name
+  key_name = "terraform-key"
 
   tags = {
     Name = "Jenkins-Server"
   }
+}
+
+# Outputs
+output "jenkins_public_ip" {
+  value = aws_instance.jenkins_server.public_ip
+}
+
+output "jenkins_url" {
+  value = "http://${aws_instance.jenkins_server.public_ip}:8080"
 }
