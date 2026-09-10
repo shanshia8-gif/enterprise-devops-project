@@ -13,7 +13,7 @@ variable "instance_type" {
 variable "key_name" {
   description = "Existing AWS EC2 key pair name"
   type        = string
-  default     = "shivaya"
+  default     = "terraform-key"
 }
 
 variable "ami_id" {
