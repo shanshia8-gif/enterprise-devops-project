@@ -9,38 +9,6 @@ pipeline {
             }
         }
 
-        stage('Terraform Init') {
-            steps {
-                dir('terraform') {
-                    sh 'terraform init -input=false'
-                }
-            }
-        }
-
-        stage('Terraform Validate') {
-            steps {
-                dir('terraform') {
-                    sh 'terraform validate'
-                }
-            }
-        }
-
-        stage('Terraform Plan') {
-            steps {
-                dir('terraform') {
-                    sh 'terraform plan -input=false'
-                }
-            }
-        }
-
-        stage('Terraform Apply') {
-            steps {
-                dir('terraform') {
-                    sh 'terraform apply -auto-approve -input=false'
-                }
-            }
-        }
-
         stage('Build Docker Image') {
             steps {
                 sh 'docker build -t enterprise-devops:latest .'
@@ -59,14 +27,27 @@ pipeline {
                 sh 'docker run -d --name enterprise-devops-container -p 8081:80 enterprise-devops:latest'
             }
         }
+
+        stage('Test Application') {
+            steps {
+                sh 'curl -f http://localhost:8081'
+            }
+        }
+
+        stage('Test App Server SSH') {
+            steps {
+                sshagent(['app-server-ssh']) {
+                    sh '''
+                        ssh -o StrictHostKeyChecking=no ubuntu@10.0.1.161 "hostname && docker --version"
+                    '''
+                }
+            }
+        }
     }
-}
-stage('Test App Server SSH') {
-    steps {
-        sshagent(['app-server-ssh']) {
-            sh '''
-                ssh -o StrictHostKeyChecking=no ubuntu@10.0.1.161 "hostname && docker --version"
-            '''
+
+    post {
+        always {
+            deleteDir()
         }
     }
 }
