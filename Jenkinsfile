@@ -33,6 +33,8 @@ pipeline {
                 sh 'curl -f http://localhost:8081'
             }
         }
+    }
+
     post {
         always {
             deleteDir()
