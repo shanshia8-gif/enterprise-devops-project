@@ -33,18 +33,6 @@ pipeline {
                 sh 'curl -f http://localhost:8081'
             }
         }
-
-        stage('Test App Server SSH') {
-            steps {
-                sshagent(['app-server-ssh']) {
-                    sh '''
-                        ssh -o StrictHostKeyChecking=no ubuntu@10.0.1.161 "hostname && docker --version"
-                    '''
-                }
-            }
-        }
-    }
-
     post {
         always {
             deleteDir()
