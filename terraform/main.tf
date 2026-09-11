@@ -13,7 +13,10 @@ provider "aws" {
   region = "ap-south-1"
 }
 
-# VPC
+# =========================================================
+# JENKINS SERVER NETWORK
+# =========================================================
+
 resource "aws_vpc" "devops_vpc" {
   cidr_block           = "10.0.0.0/16"
   enable_dns_support   = true
@@ -24,7 +27,6 @@ resource "aws_vpc" "devops_vpc" {
   }
 }
 
-# Public Subnet
 resource "aws_subnet" "public_subnet" {
   vpc_id                  = aws_vpc.devops_vpc.id
   cidr_block              = "10.0.1.0/24"
@@ -36,7 +38,6 @@ resource "aws_subnet" "public_subnet" {
   }
 }
 
-# Internet Gateway
 resource "aws_internet_gateway" "devops_igw" {
   vpc_id = aws_vpc.devops_vpc.id
 
@@ -45,7 +46,6 @@ resource "aws_internet_gateway" "devops_igw" {
   }
 }
 
-# Public Route Table
 resource "aws_route_table" "public_route_table" {
   vpc_id = aws_vpc.devops_vpc.id
 
@@ -59,19 +59,20 @@ resource "aws_route_table" "public_route_table" {
   }
 }
 
-# Route Table Association
 resource "aws_route_table_association" "public_subnet_association" {
   subnet_id      = aws_subnet.public_subnet.id
   route_table_id = aws_route_table.public_route_table.id
 }
 
-# Security Group
+# =========================================================
+# JENKINS SECURITY GROUP
+# =========================================================
+
 resource "aws_security_group" "devops_sg" {
   name        = "enterprise-devops-sg"
   description = "Security group for DevOps project"
   vpc_id      = aws_vpc.devops_vpc.id
 
-  # SSH
   ingress {
     description = "SSH"
     from_port   = 22
@@ -80,7 +81,6 @@ resource "aws_security_group" "devops_sg" {
     cidr_blocks = ["122.171.21.97/32"]
   }
 
-  # Jenkins
   ingress {
     description = "Jenkins"
     from_port   = 8080
@@ -89,7 +89,6 @@ resource "aws_security_group" "devops_sg" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  # HTTP
   ingress {
     description = "HTTP"
     from_port   = 80
@@ -98,7 +97,6 @@ resource "aws_security_group" "devops_sg" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  # Enterprise DevOps Application
   ingress {
     description = "Enterprise DevOps Application"
     from_port   = 8081
@@ -107,7 +105,6 @@ resource "aws_security_group" "devops_sg" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  # All outbound traffic
   egress {
     from_port   = 0
     to_port     = 0
@@ -116,11 +113,26 @@ resource "aws_security_group" "devops_sg" {
   }
 
   tags = {
-    Name = "enterprise-devops-security-group"
+  Name = "enterprise-devops-security-group"
   }
+} 
+
+# =========================================================
+# EXISTING APPLICATION SERVER NETWORK
+# =========================================================
+
+data "aws_subnet" "app_subnet" {
+  id = "subnet-04baae7b5b5863d4b"
 }
 
-# EC2 Instance
+data "aws_security_group" "app_sg" {
+  id = "sg-0a31254edc692a4b6"
+}
+
+# =========================================================
+# JENKINS SERVER
+# =========================================================
+
 resource "aws_instance" "jenkins_server" {
   ami           = "ami-0f918f7e67a3323f0"
   instance_type = "t3.small"
@@ -136,11 +148,41 @@ resource "aws_instance" "jenkins_server" {
   }
 }
 
-# Outputs
+# =========================================================
+# APPLICATION SERVER
+# =========================================================
+
+resource "aws_instance" "app_server" {
+  ami           = "ami-0f918f7e67a3323f0"
+  instance_type = "t3.small"
+
+  subnet_id                   = data.aws_subnet.app_subnet.id
+  vpc_security_group_ids      = [data.aws_security_group.app_sg.id]
+  associate_public_ip_address = true
+
+  key_name = "terraform-key"
+
+  tags = {
+    Name = "Enterprise-DevOps-App-Server"
+  }
+}
+
+# =========================================================
+# OUTPUTS
+# =========================================================
+
 output "jenkins_public_ip" {
   value = aws_instance.jenkins_server.public_ip
 }
 
 output "jenkins_url" {
   value = "http://${aws_instance.jenkins_server.public_ip}:8080"
+}
+
+output "app_server_public_ip" {
+  value = aws_instance.app_server.public_ip
+}
+
+output "app_server_url" {
+  value = "http://${aws_instance.app_server.public_ip}:8081"
 }
