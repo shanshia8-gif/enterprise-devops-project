@@ -1,51 +1,82 @@
-# Enterprise DevOps Project
+# Enterprise DevOps Lifecycle Automation on AWS
 
-## 🚀 Project Overview
+## Project Overview
 
-This project demonstrates an end-to-end DevOps implementation for deploying a web application using Terraform, AWS EC2, Jenkins, Docker, and NGINX.
+This project demonstrates an end-to-end DevOps workflow for deploying a containerized web application on AWS.
 
-The project automates infrastructure provisioning and application deployment using Infrastructure as Code (IaC) and a CI/CD pipeline.
+The project combines **Terraform, AWS EC2, Jenkins, Docker, NGINX, Linux, and GitHub** to demonstrate Infrastructure as Code (IaC), continuous integration, containerization, and automated application deployment.
 
-Terraform provisions the AWS infrastructure, while Jenkins automates the process of building a Docker image and deploying the application as a Docker container running NGINX.
+Terraform is used to provision the AWS infrastructure, while Jenkins retrieves the application source code from GitHub, builds the Docker image, and deploys the application as a Docker container on the application server.
 
 ---
 
-## 🏗️ Architecture
+## Architecture
 
 ```text
-Developer
-    │
-    ▼
-GitHub Repository
-    │
-    ▼
-Jenkins CI/CD Pipeline
-    │
-    ▼
-Build Docker Image
-    │
-    ▼
-Docker Container
-    │
-    └── NGINX Web Server
-    │
-    ▼
-AWS EC2 Instance
+                    Developer
+                        |
+                        v
+                  GitHub Repository
+                        |
+                        v
+                Jenkins CI/CD Server
+                        |
+                        | Checkout
+                        v
+                  Build Docker Image
+                        |
+                        v
+              Application Server
+                        |
+                        v
+                Docker Container
+                        |
+                        v
+                  NGINX Web Server
+                        |
+                        v
+                Web Application
 ```
 
-## 🛠️ Technology Stack
+### AWS Infrastructure
 
-| Technology | Purpose |
-|---|---|
-| AWS EC2 | Cloud infrastructure for hosting the application |
-| Terraform | Infrastructure as Code (IaC) |
-| Jenkins | Continuous Integration and Continuous Deployment |
-| Docker | Application containerization |
-| NGINX | Web server for serving the application |
-| GitHub | Source code management |
-| Linux | Operating system environment |
+```text
+                         AWS
+                          |
+                +---------+---------+
+                |                   |
+                v                   v
+          Jenkins EC2          Application EC2
+                |                   |
+                |                   |
+             Jenkins              Docker
+                                    |
+                                  NGINX
+                                    |
+                              Web Application
+```
 
-## 📂 Project Structure
+---
+
+## Technology Stack
+
+| Technology       | Purpose                                      |
+| ---------------- | -------------------------------------------- |
+| AWS EC2          | Hosts the Jenkins and application servers    |
+| AWS VPC          | Provides isolated network infrastructure     |
+| AWS Subnet       | Provides network placement for EC2 resources |
+| Internet Gateway | Provides internet connectivity               |
+| Security Group   | Controls inbound and outbound traffic        |
+| Terraform        | Infrastructure as Code                       |
+| Jenkins          | CI/CD automation                             |
+| Docker           | Application containerization                 |
+| NGINX            | Web server                                   |
+| GitHub           | Source code management                       |
+| Linux            | Server operating system                      |
+
+---
+
+## Project Structure
 
 ```text
 enterprise-devops-project/
@@ -57,151 +88,329 @@ enterprise-devops-project/
 │
 └── terraform/
     ├── main.tf
+    ├── providers.tf
+    ├── variables.tf
+    ├── outputs.tf
     └── .terraform.lock.hcl
+```
 
-## ⚙️ Infrastructure Provisioning with Terraform
+---
 
-Terraform is used to provision AWS infrastructure including:
+# Infrastructure Provisioning with Terraform
 
-- VPC
-- Public Subnet
-- Internet Gateway
-- Route Table
-- Security Group
-- EC2 Instance
+Terraform is used to define and provision the AWS infrastructure required for the project.
 
-### Terraform Commands
+The infrastructure includes:
+
+* AWS VPC
+* Public subnet
+* Internet Gateway
+* Route table
+* Route table association
+* Security Group
+* Jenkins EC2 instance
+* Application EC2 instance
+
+Terraform follows an Infrastructure as Code approach, allowing the infrastructure configuration to be maintained in GitHub.
+
+## Terraform Configuration
+
+The project uses:
+
+* Terraform `>= 1.5.0`
+* AWS provider `~> 6.0`
+* AWS region `ap-south-1`
+* EC2 instance type `t3.small`
+* Existing EC2 key pair `terraform-key`
+
+## Terraform Workflow
+
+```text
+Terraform Configuration
+        |
+        v
+terraform init
+        |
+        v
+terraform validate
+        |
+        v
+terraform plan
+        |
+        v
+terraform apply
+        |
+        v
+AWS Infrastructure
+```
+
+### Initialize Terraform
 
 ```bash
 cd terraform
 terraform init
+```
+
+### Validate the configuration
+
+```bash
 terraform validate
+```
+
+### Review infrastructure changes
+
+```bash
 terraform plan
+```
+
+### Apply infrastructure
+
+```bash
 terraform apply
 ```
 
-## 🐳 Docker Containerization
+> `terraform apply` should only be executed after reviewing the Terraform plan.
 
-The application is containerized using Docker. The Docker image uses NGINX to serve the static web application.
+---
 
-### Build the Docker image
+# Jenkins CI/CD Pipeline
+
+Jenkins is used to automate the application deployment process.
+
+The Jenkins pipeline retrieves the source code from GitHub and performs the Docker build and deployment process.
+
+## Pipeline Workflow
+
+```text
+GitHub
+   |
+   v
+Jenkins
+   |
+   v
+Checkout Source Code
+   |
+   v
+Build Docker Image
+   |
+   v
+Stop Existing Container
+   |
+   v
+Remove Existing Container
+   |
+   v
+Run New Docker Container
+   |
+   v
+NGINX Application
+```
+
+## Current Jenkins Pipeline Stages
+
+1. Checkout source code from GitHub
+2. Build Docker image
+3. Stop the existing Docker container
+4. Remove the existing Docker container
+5. Start the new Docker container
+
+This provides an automated deployment workflow whenever the Jenkins pipeline is executed.
+
+---
+
+# Docker Containerization
+
+The web application is packaged into a Docker image.
+
+The Docker image uses **NGINX** as the web server and serves the application's static web content.
+
+## Build Docker Image
 
 ```bash
 docker build -t enterprise-devops:latest .
 ```
 
-### Run the Docker container
+## Run Docker Container
 
 ```bash
-docker run -d --name enterprise-devops-container -p 8081:80 enterprise-devops:latest
+docker run -d \
+  --name enterprise-devops-container \
+  -p 8081:80 \
+  enterprise-devops:latest
 ```
 
-The application will be available at:
+The container maps:
 
 ```text
-http://<EC2-PUBLIC-IP>:8081
+EC2 Port 8081
+      |
+      v
+Container Port 80
+      |
+      v
+NGINX
 ```
 
-## 🔄 Jenkins CI/CD Pipeline
-
-Jenkins automates the application deployment process.
-
-The pipeline performs the following stages:
-
-1. Checkout source code from GitHub
-2. Build the Docker image
-3. Stop the existing container
-4. Remove the previous container
-5. Deploy the new container
-
-## 🔁 CI/CD Workflow
+The application can therefore be accessed through:
 
 ```text
-Developer Pushes Code
-        │
-        ▼
-GitHub Repository
-        │
-        ▼
-Jenkins Pipeline
-        │
-        ▼
-Docker Image Built
-        │
-        ▼
-Old Container Stopped
-        │
-        ▼
-Old Container Removed
-        │
-        ▼
-New Container Deployed
-        │
-        ▼
-Application Available
+http://<APPLICATION-SERVER-PUBLIC-IP>:8081
 ```
 
-## 🔐 Security Considerations
+---
 
-This project is designed for learning and demonstration purposes.
+# Application Deployment
 
-For production environments, recommended improvements include:
+The application is deployed to an AWS EC2 application server.
 
-- Restrict SSH access to trusted IP addresses
-- Avoid exposing SSH to `0.0.0.0/0`
-- Restrict Jenkins access to authorized users
-- Use IAM roles instead of storing credentials
-- Store secrets securely using Jenkins Credentials Manager or AWS Secrets Manager
-- Apply the principle of least privilege
-- Enable HTTPS for production workloads
-
-## 🌐 Application Access
-
-After successful deployment, access the application using:
+The deployment flow is:
 
 ```text
-http://<EC2-PUBLIC-IP>:8081
+Developer
+    |
+    v
+GitHub
+    |
+    v
+Jenkins
+    |
+    v
+Docker Build
+    |
+    v
+Docker Container
+    |
+    v
+NGINX
+    |
+    v
+Web Application
 ```
 
-Make sure port **8081** is allowed in the AWS Security Group.
+---
 
-## 📊 Project Outcome
+# Network Configuration
 
-This project demonstrates practical experience with:
+The Terraform configuration creates a VPC with the following network design:
 
-- Infrastructure provisioning using Terraform
-- AWS cloud infrastructure
-- CI/CD automation using Jenkins
-- Application containerization using Docker
-- Web application hosting using NGINX
-- Automated deployment workflows
-- Git-based source code management
+```text
+VPC
+10.0.0.0/16
+    |
+    +-- Public Subnet
+        10.0.1.0/24
+             |
+             +-- Jenkins EC2
+```
 
-The project demonstrates how DevOps tools can be integrated to automate infrastructure provisioning and application deployment.
+The application server uses an existing subnet and security group referenced through Terraform data sources.
 
-## 🚀 Future Enhancements
+---
 
-Possible future improvements include:
+# Security Group Configuration
 
-- Automated Jenkins and Docker installation using Terraform `user_data`
-- Automated testing
-- Container security scanning with Trivy
-- Docker image storage using Docker Hub or Amazon ECR
-- Blue-Green deployment
-- HTTPS implementation
-- Monitoring using Prometheus and Grafana
-- Centralized logging
-- Kubernetes deployment
-- GitHub webhook integration
+The project uses AWS Security Groups to control network traffic.
 
-## 👩‍💻 Author
+The Jenkins server security group includes access for:
+
+| Port | Purpose     |
+| ---: | ----------- |
+|   22 | SSH         |
+| 8080 | Jenkins     |
+|   80 | HTTP        |
+| 8081 | Application |
+
+For learning and demonstration purposes, some services are exposed publicly.
+
+## Production Security Improvements
+
+For a production environment, the following improvements should be implemented:
+
+* Restrict SSH access to trusted IP addresses
+* Restrict Jenkins access using approved networks or a load balancer
+* Avoid unnecessary public exposure
+* Use IAM roles instead of long-term AWS credentials
+* Store secrets in Jenkins Credentials Manager or AWS Secrets Manager
+* Apply least-privilege IAM policies
+* Enable HTTPS
+* Use private subnets for application servers where appropriate
+* Add monitoring and centralized logging
+
+---
+
+# Application Access
+
+After successful deployment, the application can be accessed using:
+
+```text
+http://<APPLICATION-SERVER-PUBLIC-IP>:8081
+```
+
+Jenkins can be accessed using:
+
+```text
+http://<JENKINS-PUBLIC-IP>:8080
+```
+
+The exact IP addresses are generated by Terraform outputs after infrastructure provisioning.
+
+---
+
+# Project Outcome
+
+This project demonstrates practical implementation of:
+
+* AWS cloud infrastructure
+* Infrastructure as Code using Terraform
+* AWS VPC networking
+* EC2 provisioning
+* Security Group configuration
+* Jenkins CI/CD
+* Docker containerization
+* NGINX web serving
+* GitHub source-code management
+* Automated application deployment
+
+The project demonstrates how multiple DevOps tools can be integrated into a single deployment workflow.
+
+---
+
+# Future Enhancements
+
+The following features can be added in future iterations:
+
+* Docker image publishing to Docker Hub or Amazon ECR
+* Automated testing
+* Container security scanning using Trivy
+* Ansible-based server configuration
+* Kubernetes deployment
+* Prometheus and Grafana monitoring
+* Centralized logging
+* HTTPS with SSL/TLS
+* GitHub webhook-triggered Jenkins builds
+* Blue-Green or Rolling deployment
+* AWS Application Load Balancer
+* Auto Scaling
+* AWS IAM role-based access
+
+These are listed as future enhancements and are not represented as currently implemented features.
+
+---
+
+# Author
 
 **Shanshi A**
 
 GitHub: https://github.com/shanshia8-gif
 
-## ⭐ Conclusion
+---
 
-This project demonstrates an end-to-end DevOps workflow using **Terraform, AWS EC2, Jenkins, Docker, NGINX, and GitHub**.
+# Conclusion
 
-Terraform provisions the cloud infrastructure, while Jenkins automates the application build and deployment process. Docker provides consistent application deployment through containerization, and NGINX serves the web application.
+The Enterprise DevOps Lifecycle Automation project demonstrates an end-to-end workflow using:
+
+**GitHub → Jenkins → Docker → NGINX → AWS EC2**
+
+Terraform provides Infrastructure as Code for the AWS environment, Jenkins automates the application deployment workflow, Docker provides containerization, and NGINX serves the web application.
+
+The project provides a practical foundation for understanding how DevOps tools work together to automate infrastructure and application deployment.
